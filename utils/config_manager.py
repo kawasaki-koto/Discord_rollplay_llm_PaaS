@@ -1,7 +1,7 @@
 import os
 import json
 from utils.console_display import log_error, log_system
-from utils import data_manager
+import utils.db_manager as data_manager
 
 # --- グローバル設定変数 ---
 # これらの変数は init() が呼ばれるまで空です
