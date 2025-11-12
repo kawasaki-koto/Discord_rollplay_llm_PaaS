@@ -2,3 +2,4 @@ colorama
 discord.py
 protobuf
 pymongo
+google-generativeai
