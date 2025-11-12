@@ -44,7 +44,7 @@ def load_all_data():
     """
     起動時に全てのデータをDBから読み込み、メモリにキャッシュする
     """
-    if not _db:
+    if _db is None:
         log_error("DB_MANAGER", "DBが初期化されていません。load_all_dataをスキップします。")
         return
 
@@ -78,7 +78,7 @@ def save_data(key: str, data: dict | list):
     """
     指定されたキーのデータ（メモリキャッシュ）をDBに保存する
     """
-    if not _db:
+    if _db is None:
         return False
 
     try:
@@ -151,7 +151,7 @@ def save_all_data():
     """
     メモリ上の全てのデータをDBに保存する（シャットダウン時や!saveコマンド用）
     """
-    if not _db:
+    if _db is None:
         log_error("DB_MANAGER", "DB未接続のため、全データの保存をスキップします。")
         return
 
