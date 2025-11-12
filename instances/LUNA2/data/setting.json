@@ -1,0 +1,12 @@
+{
+  "config": {
+    "character_name": "LUNA",
+    "active_key": 2,
+    "default_channel": 1420109700430827520
+  },
+  "channel_settings": {
+    "1420109700430827520": {
+      "chat_mode": true
+    }
+  }
+}

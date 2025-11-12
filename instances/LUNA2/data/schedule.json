@@ -1,0 +1,68 @@
+{
+  "activity_params": {
+    "active": {
+      "seconds": 1800,
+      "sigma": 0
+    },
+    "normal": {
+      "seconds": 3600,
+      "sigma": 0
+    },
+    "inactive": {
+      "seconds": 7200,
+      "sigma": 0
+    }
+  },
+  "weekday": {
+    "0": { "level": "normal", "action": "待機" },
+    "1": { "level": "normal", "action": "待機" },
+    "2": { "level": "normal", "action": "待機" },
+    "3": { "level": "normal", "action": "待機" },
+    "4": { "level": "normal", "action": "待機" },
+    "5": { "level": "normal", "action": "待機" },
+    "6": { "level": "normal", "action": "待機" },
+    "7": { "level": "active", "action": "待機" },
+    "8": { "level": "normal", "action": "待機" },
+    "9": { "level": "normal", "action": "待機" },
+    "10": { "level": "normal", "action": "待機" },
+    "11": { "level": "normal", "action": "待機" },
+    "12": { "level": "active", "action": "待機" },
+    "13": { "level": "normal", "action": "待機" },
+    "14": { "level": "normal", "action": "待機" },
+    "15": { "level": "normal", "action": "待機" },
+    "16": { "level": "normal", "action": "待機" },
+    "17": { "level": "active", "action": "待機" },
+    "18": { "level": "normal", "action": "待機" },
+    "19": { "level": "normal", "action": "待機" },
+    "20": { "level": "normal", "action": "待機" },
+    "21": { "level": "normal", "action": "待機" },
+    "22": { "level": "active", "action": "待機" },
+    "23": { "level": "normal", "action": "待機" }
+  },
+  "weekend": {
+    "0": { "level": "normal", "action": "待機" },
+    "1": { "level": "normal", "action": "待機" },
+    "2": { "level": "normal", "action": "待機" },
+    "3": { "level": "normal", "action": "待機" },
+    "4": { "level": "normal", "action": "待機" },
+    "5": { "level": "normal", "action": "待機" },
+    "6": { "level": "normal", "action": "待機" },
+    "7": { "level": "active", "action": "待機" },
+    "8": { "level": "normal", "action": "待機" },
+    "9": { "level": "normal", "action": "待機" },
+    "10": { "level": "normal", "action": "待機" },
+    "11": { "level": "normal", "action": "待機" },
+    "12": { "level": "active", "action": "待機" },
+    "13": { "level": "normal", "action": "待機" },
+    "14": { "level": "normal", "action": "待機" },
+    "15": { "level": "normal", "action": "待機" },
+    "16": { "level": "normal", "action": "待機" },
+    "17": { "level": "active", "action": "待機" },
+    "18": { "level": "normal", "action": "待機" },
+    "19": { "level": "normal", "action": "待機" },
+    "20": { "level": "normal", "action": "待機" },
+    "21": { "level": "normal", "action": "待機" },
+    "22": { "level": "active", "action": "待機" },
+    "23": { "level": "normal", "action": "待機" }
+  }
+}

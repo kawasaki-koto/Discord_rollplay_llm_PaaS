@@ -1,0 +1,92 @@
+{
+  "emotion_map": {
+    "joy": [
+      "😊",
+      "喜び"
+    ],
+    "anticipation": [
+      "😌",
+      "期待"
+    ],
+    "anger": [
+      "😠",
+      "怒り"
+    ],
+    "disgust": [
+      "🤢",
+      "嫌悪"
+    ],
+    "sadness": [
+      "😢",
+      "悲しみ"
+    ],
+    "surprise": [
+      "😲",
+      "驚き"
+    ],
+    "fear": [
+      "😱",
+      "恐れ"
+    ],
+    "trust": [
+      "😇",
+      "信頼"
+    ],
+    "love": [
+      "😍",
+      "愛"
+    ],
+    "libido": [
+      "❤️‍🔥",
+      "リビドー"
+    ],
+    "shame": [
+      "😳",
+      "羞恥心"
+    ],
+    "guilty": [
+      "😔",
+      "罪悪感"
+    ],
+    "jealousy": [
+      "😒",
+      "嫉妬"
+    ],
+    "crazy": [
+      "🤪",
+      "狂気"
+    ]
+  },
+  "default_emotions": {
+    "joy": 0,
+    "anticipation": 0,
+    "anger": 0,
+    "disgust": 0,
+    "sadness": 0,
+    "surprise": 0,
+    "fear": 0,
+    "trust": 0,
+    "love": 0,
+    "libido": 0,
+    "shame": 0,
+    "guilty": 0,
+    "jealousy": 0,
+    "crazy": 0
+  },
+  "current_emotions": {
+    "joy": 433,
+    "anticipation": 500,
+    "anger": 0,
+    "disgust": 0,
+    "sadness": 0,
+    "surprise": 20,
+    "fear": 0,
+    "trust": 500,
+    "love": 422,
+    "libido": 0,
+    "shame": 0,
+    "guilty": 0,
+    "jealousy": 0,
+    "crazy": 0
+  }
+}
