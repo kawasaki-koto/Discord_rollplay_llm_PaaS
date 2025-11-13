@@ -23,7 +23,7 @@ GEMINI_API_KEY_2 = os.getenv("GEMINI_API_KEY_2")
 GEMINI_API_KEY_3 = os.getenv("GEMINI_API_KEY_3")
 
 # --- 静的設定 ---
-MODEL_PRO = 'gemini-2.5-pro'
+MODEL_PRO = 'gemini-2.5-flash'
 MODEL_PRO_2 = 'gemini-2.5-flash'
 MODEL_PRO_3 = 'gemini-2.5-flash-lite'
 MODEL_FLASH = 'gemini-2.0-flash'
