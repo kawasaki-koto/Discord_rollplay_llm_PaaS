@@ -3,7 +3,7 @@
 import google.api_core.exceptions
 import google.generativeai as genai
 import utils.config_manager as config
-import utils.db_manager as data_manager
+from utils import db_manager as data_manager
 from utils.console_display import log_system, log_error, log_info, log_warning, log_success
 from datetime import datetime
 import json
@@ -28,7 +28,6 @@ def initialize_histories():
     """
     履歴キャッシュの初期化。db_managerの互換関数を呼び出す。
     """
-    # ★ db_manager の関数を呼び出す
     data_manager.initialize_histories()
 
 def _load_persona() -> str | None:
@@ -52,9 +51,9 @@ def _load_persona() -> str | None:
 def get_channel_history(channel_id: int) -> list | None:
     """
     指定されたチャンネルIDの履歴を db_manager のキャッシュから取得または初期化。
-    初期化した場合はDBにも保存する。
+    取得・初期化に成功した場合はリストを、失敗した場合は None を返す。
     """
-    history_cache = data_manager.get_data('history') # ★ db_manager のキャッシュを取得
+    history_cache = data_manager.get_data('history')
     if history_cache is None:
         log_error("HISTORY", "db_managerの履歴キャッシュ(_data_cache['history'])が見つかりません。")
         return None
@@ -71,15 +70,12 @@ def get_channel_history(channel_id: int) -> list | None:
             history_cache[str_channel_id] = initial_history
             log_success("HISTORY", f"CH[{channel_id}] の履歴をペルソナで正常に{log_action}しました。")
             
-            # ★★★ DBに保存 ★★★
+            # DBに保存
             data_manager.save_data('history', history_cache)
             log_info("HISTORY", f"CH[{channel_id}] の初期化履歴をDBに保存しました。")
-            
         else:
             log_error("HISTORY", f"CH[{channel_id}] の履歴{log_action}に失敗しました。ペルソナが読み込めません。")
-            history_cache[str_channel_id] = [] # 空のリストで初期化
-            
-            # ★★★ 空リストでもDBに保存 ★★★
+            history_cache[str_channel_id] = [] # 空のリストで初期化しておく
             data_manager.save_data('history', history_cache)
 
     return history_cache.get(str_channel_id)
@@ -91,19 +87,25 @@ def add_message_to_history(channel_id: int, role: str, message: str):
          log_error("HISTORY_ADD", f"CH[{channel_id}] の履歴リスト取得に失敗したため、メッセージを追加できません。")
          return
 
-    # 履歴制限チェック (変更なし)
+    # 履歴制限チェック
     try:
         max_history_length = config.get_max_history_length()
-        # (中略：古い履歴ペアを削除するロジック)
+        if len(history) >= max_history_length:
+            if len(history) >= 3: # ペルソナ + 1ペア以上ある場合
+                 del history[1:3] # インデックス1と2 (ペルソナ直後のペア) を削除
+                 log_warning("HISTORY", f"CH[{channel_id}] の履歴が長すぎるため、古い会話ペア(ペルソナ直後)を削除しました。")
+            elif len(history) == 2 and history[0].get("role") == "user":
+                 log_warning("HISTORY", f"CH[{channel_id}] 履歴が最大長ですが、ペルソナと応答のみのため削除しませんでした。")
+
+    except AttributeError:
+        log_warning("HISTORY", "configにget_max_history_lengthが見つかりません。履歴制限はスキップされます。")
     except Exception as e:
         log_error("HISTORY", f"履歴削除中にエラー: {e}")
 
-    # メモリキャッシュ（_data_cache['history'][str_channel_id]）に append
     history.append({"role": role, "parts": [message]})
     log_info("HISTORY", f"CH[{channel_id}] の履歴に {role} のメッセージを追加しました。 (現在の履歴数: {len(history)})")
-
-    # ★★★ DBに保存 ★★★
-    # history 変数はキャッシュ内のリストへの参照なので、キャッシュ全体を保存する
+    
+    # DBに保存
     data_manager.save_data('history', data_manager.get_data('history'))
 
 
@@ -137,12 +139,11 @@ async def send_request(model_name: str, prompt: str, channel_id: int = None):
             user_message_content = None
     # ------------------------------------
 
-    # --- 履歴取得（ここで初期化も行われる） ---
-    # ★ get_channel_history は data_manager._data_cache['history'] 内のリストへの参照を返す
+    # --- 履歴取得 ---
     history_list_ref = get_channel_history(channel_id) if channel_id is not None else []
     if history_list_ref is None and channel_id is not None:
          log_error("AI_REQUEST", f"CH[{channel_id}] の履歴取得/初期化に失敗したため、リクエストを中止します。")
-         return None # 履歴がなければリクエストできない
+         return None
     # ------------------------------------
 
     # --- APIキーリスト作成 ---
@@ -188,13 +189,11 @@ async def send_request(model_name: str, prompt: str, channel_id: int = None):
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel(model_name)
 
-                # ★★★ start_chat に渡す履歴リストの参照を使用 ★★★
                 if not history_list_ref or history_list_ref[0].get("role") != "user":
-                     log_warning("AI_REQUEST_HISTORY_WARN", f"CH[{channel_id}] の履歴が空か、最初の要素が'user'ではありません。API呼び出しに失敗する可能性があります。History: {history_list_ref}")
-                     # 空リストで試行
+                     log_warning("AI_REQUEST_HISTORY_WARN", f"CH[{channel_id}] の履歴が空か、最初の要素が'user'ではありません。API呼び出しに失敗する可能性があります。")
                      chat = model.start_chat(history=[])
                 else:
-                     chat = model.start_chat(history=history_list_ref) # ★ ここで参照を渡す
+                     chat = model.start_chat(history=history_list_ref)
 
                 log_info("AI_REQUEST", f"モデル '{model_name}' にリクエストを送信します...")
                 try:
@@ -204,19 +203,15 @@ async def send_request(model_name: str, prompt: str, channel_id: int = None):
                     api_timeout = 120
 
                 response = await asyncio.wait_for(
-                    chat.send_message_async(prompt), # 安全性設定なし
+                    chat.send_message_async(prompt),
                     timeout=api_timeout
                 )
                 log_info("AI_REQUEST_DEBUG", "chat.send_message_async の呼び出しが完了しました。")
 
                 if not hasattr(response, 'text'):
-                     # (応答オブジェクトのチェック処理)
                      feedback = getattr(response, 'prompt_feedback', None)
                      candidates = getattr(response, 'candidates', [])
                      log_error("AI_RESPONSE", "モデルからの応答に text 属性が含まれていません。")
-                     if feedback: log_error("AI_RESPONSE_DEBUG", f"Prompt Feedback: {feedback}")
-                     if candidates: log_error("AI_RESPONSE_DEBUG", f"Candidates: {candidates}")
-                     else: log_error("AI_RESPONSE_DEBUG", f"受信したresponseオブジェクト: {response}")
                      last_exception = Exception(f"Invalid response object received. Feedback: {feedback}, Candidates: {candidates}")
                      retries_with_current_key = max_retries_per_key + 1
                      continue
@@ -225,10 +220,9 @@ async def send_request(model_name: str, prompt: str, channel_id: int = None):
                 successful_key = api_key
                 current_api_key_index = current_index_in_original_list
                 log_success("AI_RESPONSE", f"APIキー {current_index_in_original_list + 1} で応答を受信しました。")
-                break # 内側ループ脱出
+                break
 
             except google.api_core.exceptions.ResourceExhausted as e:
-                # (レート制限エラーの処理)
                 log_warning("AI_REQUEST_RATE_LIMIT", f"レート制限エラー発生 (APIキー {current_index_in_original_list + 1}): {e}")
                 last_exception = e
                 retries_with_current_key += 1
@@ -236,48 +230,47 @@ async def send_request(model_name: str, prompt: str, channel_id: int = None):
                 try:
                     match = re.search(r"Please retry in (\d+\.?\d*)s", str(e))
                     if match: retry_delay_seconds = float(match.group(1)) + 1.5
-                except Exception as parse_error:
-                    log_warning("AI_REQUEST_RATE_LIMIT", f"待機時間の抽出に失敗: {parse_error}。デフォルトの{retry_delay_seconds}秒を使用します。")
+                except Exception:
+                    pass
                 wait_duration = retry_delay_seconds
                 should_wait_before_next_key = True
+                
                 if retries_with_current_key <= max_retries_per_key:
-                    log_info("AI_REQUEST_RATE_LIMIT", f"{retry_delay_seconds:.1f}秒待機してから同じAPIキーで再試行します (試行 {retries_with_current_key}/{max_retries_per_key})...")
+                    log_info("AI_REQUEST_RATE_LIMIT", f"{retry_delay_seconds:.1f}秒待機してから同じAPIキーで再試行します...")
                     await asyncio.sleep(retry_delay_seconds)
                     continue
                 else:
                     log_warning("AI_REQUEST_RATE_LIMIT", f"APIキー {current_index_in_original_list + 1} での再試行上限に達しました。")
                     break
 
+            except asyncio.TimeoutError:
+                # (タイムアウトエラーの処理 - 待機せず次のキーへ)
+                log_error("AI_REQUEST_ERROR", f"APIリクエストがタイムアウトしました (APIキー {current_index_in_original_list + 1})。")
+                last_exception = asyncio.TimeoutError("API request timed out.")
+                
+                # ★ 修正: 待機フラグをFalseにし、即座に次のキーへ移行
+                should_wait_before_next_key = False
+                wait_duration = 0
+                retries_with_current_key = max_retries_per_key + 1 # 現在のキーでのループを抜ける
+                
+                log_info("AI_REQUEST", "待機せずに次のAPIキーへ切り替えます。")
+                break
+
             except genai.types.StopCandidateException as e:
-                 # (安全性ブロックエラーの処理 - 次のキーへ)
-                 log_error("AI_REQUEST_SAFETY", f"コンテンツが安全性によりブロックされました (APIキー {current_index_in_original_list + 1}) - 安全設定削除後も発生?: {e}")
-                 try:
-                     if response and hasattr(response, 'prompt_feedback') and response.prompt_feedback:
-                          log_error("AI_REQUEST_SAFETY", f"Prompt Feedback: {response.prompt_feedback}")
-                 except Exception as feedback_error:
-                      log_error("AI_REQUEST_SAFETY", f"Feedback取得中にエラー: {feedback_error}")
+                 log_error("AI_REQUEST_SAFETY", f"コンテンツが安全性によりブロックされました (APIキー {current_index_in_original_list + 1}): {e}")
                  last_exception = e
                  retries_with_current_key = max_retries_per_key + 1
                  break
 
-            except asyncio.TimeoutError:
-                # (タイムアウトエラーの処理 - 次のキーへ)
-                log_error("AI_REQUEST_ERROR", f"APIリクエストがタイムアウトしました (APIキー {current_index_in_original_list + 1})。")
-                last_exception = asyncio.TimeoutError("API request timed out.")
-                retries_with_current_key = max_retries_per_key + 1
-                break
             except Exception as e:
-                # (その他のエラーの処理)
                 if "history must begin with a user message" in str(e) or "must alternate between" in str(e):
-                    log_error("AI_REQUEST_HISTORY_INVALID", f"履歴形式エラー (APIキー {current_index_in_original_list + 1}): {e}")
-                    log_error("AI_REQUEST_HISTORY_INVALID", f"問題の履歴 (先頭5件): {history_list_ref[:5]}")
+                    log_error("AI_REQUEST_HISTORY_INVALID", f"履歴形式エラー: {e}")
                     last_exception = e
                     successful_key = None
                     key_index_to_try = len(ordered_keys)
                     break
                 else:
                     log_error("AI_REQUEST_ERROR", f"予期せぬエラー (APIキー {current_index_in_original_list + 1}): {type(e).__name__} - {e}")
-                    log_error("AI_REQUEST_ERROR", traceback.format_exc())
                     last_exception = e
                     retries_with_current_key = max_retries_per_key + 1
                     break
@@ -293,66 +286,47 @@ async def send_request(model_name: str, prompt: str, channel_id: int = None):
         key_index_to_try += 1
     # --- 外側ループ終了 ---
 
-    # --- 最終的な失敗処理 ---
     if successful_key is None:
         log_error("AI_REQUEST_FATAL", "すべてのAPIキーと再試行でリクエストに失敗しました。")
         if last_exception:
              log_error("AI_REQUEST_FATAL", f"最後の試行でのエラー: {type(last_exception).__name__} - {last_exception}")
         return None
-    # -----------------------
 
     # --- 成功時の処理 ---
     response_text = response.text
 
-    # --- リクエスト成功後に履歴を追加 (add_message_to_historyがDB対応済みに) ---
     if channel_id is not None:
+        log_info("AI_REQUEST_HISTORY_ADD", f"履歴追加処理を開始: channel_id={channel_id}")
         try:
             if user_message_content:
                 add_message_to_history(channel_id, "user", user_message_content)
-            
             if response_text:
                  add_message_to_history(channel_id, "model", response_text)
         except Exception as history_error:
-            log_error("AI_REQUEST_HISTORY_ADD", f"履歴追加中に予期せぬエラーが発生しました: {type(history_error).__name__} - {history_error}")
-            log_error("AI_REQUEST_HISTORY_ADD", traceback.format_exc())
-    else:
-        log_warning("AI_REQUEST_HISTORY_ADD", "channel_idがNoneのため、履歴は追加されません。")
-    # -----------------------------
+            log_error("AI_REQUEST_HISTORY_ADD", f"履歴追加中にエラー: {history_error}")
 
-    # --- トークン数をログに出力 ---
     try:
         if hasattr(response, 'usage_metadata') and response.usage_metadata:
             prompt_token_count = response.usage_metadata.prompt_token_count
             candidates_token_count = response.usage_metadata.candidates_token_count
             total_token_count = response.usage_metadata.total_token_count
             log_info("TOKEN_COUNT", f"Prompt: {prompt_token_count}, Candidates: {candidates_token_count}, Total: {total_token_count}")
-        else:
-            log_info("TOKEN_COUNT", "Usage metadata not available.")
     except Exception as token_error:
         log_error("AI_REQUEST_TOKEN_LOG", f"トークン数ログ出力中にエラー: {token_error}")
-    # -----------------------------
 
     return response_text
 
-# --- cogs/commands.py から呼び出される関数群 (DB対応) ---
+# --- cogs/commands.py から呼び出される関数群 ---
 
 def reset_histories():
-    """全ての会話履歴をリセットし、DBに保存します。"""
     log_system("全チャンネルの会話履歴をリセットします...")
-    # ★ db_manager の互換関数（または直接操作）を呼び出す
     data_manager.reset_histories() 
 
 def get_history_for_channel(channel_id: int):
-    """指定チャンネルの履歴をキャッシュから取得します（!history export用）。"""
-    # ★ db_manager の互換関数を呼び出す
     return data_manager.get_history_for_channel(channel_id)
 
 def load_persona() -> bool:
-    """ペルソナファイルを読み込み確認（!persona reload用）。"""
-    # ★ db_manager の互換関数を呼び出す
     return data_manager.load_persona() is not None
 
 def apply_persona_to_channel(channel_id: int):
-    """指定チャンネルの履歴をペルソナで上書きし、DBに保存します。"""
-    # ★ db_manager の互換関数を呼び出す
     data_manager.apply_persona_to_channel(channel_id)
