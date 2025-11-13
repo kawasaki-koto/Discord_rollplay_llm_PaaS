@@ -1,4 +1,4 @@
-from utils import data_manager
+import utils.db_manager as data_manager
 from datetime import datetime, timezone, timedelta
 
 def get_current_time_str():

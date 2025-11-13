@@ -6,7 +6,7 @@ import asyncio
 
 import utils.config_manager as config
 from utils.console_display import log_info, log_system, log_success, log_error, log_warning # log_warning を追加
-from utils import db_manager as data_manager
+import utils.db_manager as data_manager
 from utils import ai_request_handler, prompt_builder
 
 async def send_splittable_message(channel: discord.TextChannel, text: str, file: discord.File = None):

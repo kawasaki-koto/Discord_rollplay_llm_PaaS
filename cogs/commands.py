@@ -5,7 +5,7 @@ import io
 from datetime import datetime
 
 from utils import ai_request_handler
-from utils import db_manager as data_manager # ★ db_manager に変更
+import utils.db_manager as data_manager # ★ db_manager に変更
 from utils.console_display import log_info, log_success, log_error
 import utils.config_manager as config
 

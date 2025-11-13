@@ -3,7 +3,7 @@
 import google.api_core.exceptions
 import google.generativeai as genai
 import utils.config_manager as config
-from utils import db_manager as data_manager
+import utils.db_manager as data_manager
 from utils.console_display import log_system, log_error, log_info, log_warning, log_success
 from datetime import datetime
 import json

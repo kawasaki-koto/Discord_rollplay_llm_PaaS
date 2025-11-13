@@ -1,6 +1,6 @@
 from discord.ext import commands
 from utils.console_display import log_success
-from utils import db_manager as data_manager # ★ db_manager に変更
+import utils.db_manager as data_manager # ★ db_manager に変更
 
 class MemoryCog(commands.Cog, name="MemoryCog"):
     def __init__(self, bot):

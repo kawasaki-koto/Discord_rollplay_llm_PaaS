@@ -4,7 +4,7 @@ from discord.ext import commands
 
 import utils.config_manager as config
 from utils import ai_request_handler, prompt_builder
-from utils import db_manager as data_manager
+import utils.db_manager as data_manager
 from utils.console_display import log_error, log_info, log_success
 
 class EmotionCog(commands.Cog, name="EmotionCog"):
