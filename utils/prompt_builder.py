@@ -32,8 +32,6 @@ def get_bot_status_text(bot) -> str:
         memories_list = "\n".join(f"* {m}" for m in memories)
         memories_text = f"\n\n# 重要な記憶\n{memories_list}"
 
-    # ここ
-    # return None
     return f"""
 # 現在のあなたの感情
 # 0-500の数値で表されます
@@ -50,18 +48,20 @@ def build_response_prompt(messages: list, bot_status: str) -> str:
     """
     if messages:
         # 1. 未読メッセージがある場合
-        # ★ アクティビティ情報を含めるようにフォーマットを変更
+        # アクティビティ情報を含めてログを作成
         conversation_log = "\n".join(
-            # f"[{m['author']} @ {m['timestamp']}] (現在の行動: {m.get('activity', '不明')}): {m['content']}"
-            f"[{m['author']} @ {m['timestamp']}] : {m['content']}"
+            f"[{m['author']} @ {m['timestamp']}] (現在の行動: {m.get('activity', '不明')}): {m['content']}"
             for m in messages
         )
         instruction = "あなたはDiscordを確認したところ、以下の未読メッセージが溜まっていました。\n相手の「現在の行動」も参考にしながら、これら全ての会話の流れを踏まえて、あなたの次のメッセージを生成してください。"
+        
+        # ここで return します (conversation_log はここでしか使わない)
         return f"{instruction}\n\n{conversation_log}\n\n{bot_status}"
     else:
-        # 2. 自発的メッセージを生成させたい場合
-        instruction = "あなたはDiscordを確認したところ、未読メッセージはありませんでした。\n相手の「現在の行動」も参考にしながら、これら全ての会話の流れを踏まえて、あなたの次のメッセージを生成してください。"
-        return f"{instruction}\n\n{conversation_log}\n\n{bot_status}"
+        # 2. 自発的メッセージを生成させたい場合 (conversation_log は使わない)
+        instruction = "あなたはDiscordを確認したところ、未読メッセージはありませんでした。\n現在のあなたの感情や記憶を参考に、あなたから自由にメッセージを生成してください。"
+        
+        return f"{instruction}\n\n{bot_status}"
 
 def build_emotion_analysis_prompt(emotion_map: dict, persona: str, user_input: str, bot_response: str) -> str:
     """
