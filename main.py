@@ -2,9 +2,35 @@ import discord
 from discord.ext import commands
 import os
 import asyncio
-from utils import config_manager # ★ config_managerをインポート
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from utils import config_manager
 from utils.console_display import display_startup_banner, log_system, log_info, log_success, log_error
 from utils import db_manager as data_manager
+
+# --- Keep-Alive用 Webサーバーの定義 ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"OK")
+    
+    # ログ出力を抑制してコンソールを汚さないようにする
+    def log_message(self, format, *args):
+        pass
+
+def run_http_server():
+    port = int(os.getenv("PORT", 8080)) # Renderから渡されるPORTを使用
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    log_system(f"Keep-Alive用Webサーバーをポート {port} で起動しました。")
+    server.serve_forever()
+
+def start_keep_alive():
+    t = threading.Thread(target=run_http_server)
+    t.daemon = True
+    t.start()
+# ---------------------------------------
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -12,7 +38,6 @@ intents.presences = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-# config_managerにBotインスタンスを設定
 config_manager.set_bot_instance(bot)
 
 @bot.event
@@ -22,8 +47,7 @@ async def on_ready():
 
 async def load_cogs():
     for filename in os.listdir('./cogs'):
-        # voice.py はロードしないようにする
-        if filename.endswith('.py') and filename != 'voice.py': # ★ 修正
+        if filename.endswith('.py') and filename != 'voice.py':
             try:
                 await bot.load_extension(f'cogs.{filename[:-3]}')
                 log_info("SYSTEM", f"モジュール '{filename}' のロード完了")
@@ -31,27 +55,25 @@ async def load_cogs():
                 log_error("SYSTEM", f"モジュール '{filename}' のロード中にエラー: {e}")
 
 async def main():
-    # ★★★ 環境変数からキャラクター名を取得 ★★★
+    # ★ Webサーバーをバックグラウンドで起動
+    start_keep_alive()
+
     character_name = os.getenv("CHARACTER_NAME")
     if not character_name:
         log_error("SYSTEM", "環境変数 'CHARACTER_NAME' が設定されていません。")
         return
 
-    # ★★★ config_managerの初期化 ★★★
     if not config_manager.init(character_name):
         return
 
-    # ★★★ DBの初期化処理を追加 ★★★
-    if not data_manager.init_db(): # db_manager.init_db() を呼び出す
+    if not data_manager.init_db():
         log_error("SYSTEM", "データベースの初期化に失敗しました。起動を中止します。")
         return
 
     data_manager.load_all_data()
 
-    # ★★★ 環境変数からトークンを直接取得 ★★★
     DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
     if not DISCORD_TOKEN:
-        # config_manager.TOKEN_ENV_VAR を参照する古いロジックを削除
         log_error("SYSTEM", "環境変数 'DISCORD_TOKEN' が設定されていません。")
         return
 
